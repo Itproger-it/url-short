@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "learn-fastapi"
+version = "0.1.0"
+description = ""
+authors = ["Lux"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.103.1"
+uvicorn = {extras = ["standard"], version = "^0.23.2"}
+python-dotenv = "0.21.0"
+validators = "0.18.2"
+sqlalchemy = "1.4.32"
+pydantic-settings = "^2.1.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
