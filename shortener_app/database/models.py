@@ -2,7 +2,7 @@
 
 from sqlalchemy import Boolean, Column, Integer, String
 
-from .database import Base
+from . import Base
 
 class URL(Base):
     __tablename__ = "urls"
