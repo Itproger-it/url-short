@@ -1,96 +1,53 @@
-# shortener_app/main.py
-import validators
-from starlette.datastructures import URL
-from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
+from contextlib import asynccontextmanager
 
-from . import crud, schemas
-from .database import SessionLocal, engine, models
+from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from .config import get_settings
-
-
-app = FastAPI()
-models.Base.metadata.create_all(bind=engine)
+from .routing.link_router import link_route
+from .database import create_tables
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_tables()
+    print("Создание базы данных")
+    yield
+    print("Запуск сервера")
 
 
-def get_admin_info(db_url: models.URL) -> schemas.URLInfo:
-    base_url = URL(get_settings().base_url)
-    admin_endpoint = app.url_path_for(
-        "administration info", secret_key=db_url.secret_key
+app = FastAPI(lifespan=lifespan)
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc: HTTPException):
+    return PlainTextResponse(str(exc.detail), status_code=exc.status_code)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    err: list = exc.errors()
+    if err: err: dict = err[0]
+    err = {"msg" : err.get("msg", "Unexpected Error"), "input": err.get("input")}
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=jsonable_encoder({"detail": err, "body": exc.body}),
     )
-    db_url.url = str(base_url.replace(path=db_url.key))
-    db_url.admin_url = str(base_url.replace(path=admin_endpoint))
-    return db_url
+
+app.include_router(link_route)
 
 
-def raise_bad_request(message):
-    raise HTTPException(status_code=400, detail=message)
+origins = [
+    "*"
+]
 
-
-def raise_not_found(request):
-    message = f"URL '{request.url}' doesn't exist"
-    raise HTTPException(status_code=404, detail=message)
-
-
-@app.get("/")
-async def main():
-    return RedirectResponse("docs")
-
-
-@app.post("/url", response_model=schemas.URLInfo)
-def create_url(url: schemas.URLBase, db: Session = Depends(get_db)):
-    if not validators.url(url.target_url):
-        raise_bad_request(message="Your provided URL is not valid")
-
-
-    db_url: models.URL = crud.create_db_url(db=db, url=url)
-
-    return get_admin_info(db_url)
-
-
-@app.get("/{url_key}")
-def forward_to_target_url(
-        url_key: str,
-        request: Request,
-        db: Session = Depends(get_db)
-    ):
-    if db_url := crud.get_db_url_by_key(db=db, url_key=url_key):
-        crud.update_db_clicks(db=db, db_url=db_url)
-        return RedirectResponse(db_url.target_url)
-    else:
-        raise_not_found(request)
-
-
-@app.get(
-    "/admin/{secret_key}",
-    name="administration info",
-    response_model=schemas.URLInfo,
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-def get_url_info(
-    secret_key: str, request: Request, db: Session = Depends(get_db)
-):
-    if db_url := crud.get_db_url_by_secret_key(db, secret_key=secret_key):
-        return get_admin_info(db_url)
-    else:
-        raise_not_found(request)
-
-
-@app.delete("/admin/{secret_key}")
-def delete_url(
-    secret_key: str, request: Request, db: Session = Depends(get_db)
-):
-    if db_url := crud.deactivate_db_url_by_secret_key(db, secret_key=secret_key):
-        message = f"Successfully deleted shortened URL for '{db_url.target_url}'"
-        return {"detail": message}
-    else:
-        raise_not_found(request)

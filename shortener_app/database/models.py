@@ -1,15 +1,15 @@
 # shortener_app/models.py
 
-from sqlalchemy import Boolean, Column, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column
 
-from . import Base
+from . import Model
 
-class URL(Base):
+class URL(Model):
     __tablename__ = "urls"
 
-    id = Column(Integer, primary_key=True)
-    key = Column(String, unique=True, index=True)
-    secret_key = Column(String, unique=True, index=True)
-    target_url = Column(String, index=True)
-    is_active = Column(Boolean, default=True)
-    clicks = Column(Integer, default=0)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    key: Mapped[str] = mapped_column(unique=True, index=True)
+    secret_key: Mapped[str] = mapped_column(unique=True, index=True)
+    target_url: Mapped[str] = mapped_column(index=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    clicks: Mapped[int] = mapped_column(default=0)
