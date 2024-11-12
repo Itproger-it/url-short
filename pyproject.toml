@@ -17,6 +17,12 @@ asyncpg = "^0.29.0"
 psycopg = "^3.1.13"
 psycopg-binary = "^3.1.13"
 aiosqlite = "0.20.0"
+pyjwt = "^2.9.0"
+passlib = "^1.7.4"
+bcrypt = "^4.2.0"
+python-multipart = "^0.0.9"
+environs = "^11.0.0"
+snowflake-id = "^1.0.2"
 
 
 [build-system]

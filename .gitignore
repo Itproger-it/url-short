@@ -1,9 +1,10 @@
 __pycache__
 
 /main.py
-
+/.venv
+venv
 .env
-
+snow_flake
 *.db
 
 /alchemy_learn

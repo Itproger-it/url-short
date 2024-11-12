@@ -1,9 +1,10 @@
-# shortener_app/schemas.py
-
 from pydantic import BaseModel
 
 class URLBase(BaseModel):
     target_url: str
+  
+class URLDecode(BaseModel):
+    url: str 
 
 class URL(URLBase):
     is_active: bool
@@ -15,3 +16,11 @@ class URL(URLBase):
 class URLInfo(URL):
     url: str
     admin_url: str
+
+
+class UserLinks(URLBase):
+    clicks: int
+    key: str
+
+    class Config:
+        orm_mode = True
