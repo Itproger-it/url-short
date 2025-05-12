@@ -21,3 +21,13 @@ class AuthUserUrl(Model):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("api_user.id", ondelete="CASCADE"), nullable=False)
     url_id: Mapped[int] = mapped_column(ForeignKey("url.id", ondelete="CASCADE"), nullable=False)
+
+
+class UrlMetric(Model):
+    __tablename__ = "url_metric"
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    url_id: Mapped[int] = mapped_column(ForeignKey("url.id", ondelete="CASCADE"), nullable=False)
+    ip: Mapped[str]
+    device: Mapped[str]
+    date: Mapped[str]

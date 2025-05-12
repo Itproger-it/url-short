@@ -29,6 +29,7 @@ async def check_access_token(
     request: Request,
     # token: Annotated[str, Depends(oauth2_scheme)]
     authorization_header: str = Security(APIKeyHeader(name='Authorization', auto_error=False)),
+    session: AsyncSession = Depends(get_db),
 ) -> str:
     # clear_token = token
     clear_token = __try_to_get_clear_token(authorization_header=authorization_header)
@@ -40,7 +41,7 @@ async def check_access_token(
     except InvalidTokenError:
         raise JsonHTTPException(content=dict(AccessError.get_invalid_token_error()), status_code=403)
 
-    session: AsyncSession = await anext(get_db())
+    # session: AsyncSession = await anext(get_db())
     if await check_revoked(payload['jti'], session=session):
         raise JsonHTTPException(content=dict(AccessError.get_token_revoked_error()), status_code=403)
 

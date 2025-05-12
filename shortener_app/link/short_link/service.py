@@ -1,3 +1,4 @@
+import datetime
 import secrets
 import string
 from functools import lru_cache
@@ -10,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from shortener_app.link.short_link.model import URL, UrlMetric
 from shortener_app.security.auth.middleware.jwt.service import __try_to_get_clear_token
 
 
@@ -48,9 +50,12 @@ class ShortLinkServise:
             self, 
             session: AsyncSession, 
             url: schemas.URLBase,
+            custom_key: str = ""
         ) -> models.URL:
         id = self.__gen_snowflake_id()
-        key = await self.create_unique_random_key(session)
+        if custom_key and custom_key.isalnum():
+            key = custom_key
+        else: key = await self.create_unique_random_key(session)
         secret_key = f"{key}_{self.create_random_key(length=8)}"
         db_url = await (
             LinkRepository
@@ -73,20 +78,17 @@ class ShortLinkServise:
             self, 
             url: schemas.URLBase,
         ) -> schemas.URLBase:
-        async with aiohttp.ClientSession() as sessn:
-            async with sessn.get(url.target_url, allow_redirects=True) as response:
-                return schemas.URLDecode(url=str(response.url))
-
-    
-
-    # def __convert_snowflake_to_base62(self, snowflake_id: int) -> str:
-        # base62: list = []
-        # base62chars = string.digits + string.ascii_letters
-        # while snowflake_id > 0:
-        #     index = snowflake_id % 62
-        #     base62.append(base62chars[index])
-        #     snowflake_id //= 62
-        # return "".join(base62)
+        try:
+            connector = aiohttp.TCPConnector(ssl=False)
+            async with aiohttp.ClientSession(connector=connector) as sessn:
+                async with sessn.get(url.target_url, allow_redirects=True) as response:
+                    return schemas.URLDecode(url=str(response.url))
+                
+        except aiohttp.ClientConnectorError:
+            return schemas.URLDecode(url = url.target_url)
+        
+        except Exception as e:
+            return None
 
 
     async def get_db_url_by_key(
@@ -109,7 +111,8 @@ class ShortLinkServise:
 
 
     async def get_db_url_by_secret_key(
-            self, 
+            self,
+            user: models.APIUser,
             session: AsyncSession, 
             secret_key: str,
         ) -> models.URL|None:
@@ -118,7 +121,9 @@ class ShortLinkServise:
             session
             .execute(
                 select(models.URL)
+                .join(models.AuthUserUrl, models.URL.id == models.AuthUserUrl.url_id)
                 .where(
+                    models.AuthUserUrl.user_id == user.id,
                     models.URL.secret_key == secret_key, 
                     models.URL.is_active)
                 .limit(1)
@@ -131,11 +136,23 @@ class ShortLinkServise:
             self, 
             db: AsyncSession, 
             db_url: schemas.URL,
+            device: str,
+            ip: str,
         ) -> models.URL:
         
         db_url.clicks += 1
         await db.commit()
         await db.refresh(db_url)
+
+        metric = UrlMetric(
+            url_id=db_url.id,
+            device=device,
+            ip=ip,
+            date=datetime.datetime.now().strftime('%Y-%m-%d'),
+        )
+        db.add(metric)
+        await db.commit()
+
         return db_url
     
     async def all_urls(
@@ -152,28 +169,30 @@ class ShortLinkServise:
                 )
             )
     
-    # async def create_user_link(
-    #         self,
-    #         db: AsyncSession,
-    #         request: Request,
-    #         ):
+    async def metric_url(
+            self,
+            db: AsyncSession,
+            request: Request,
+            url: URL,
+            ):
         
-    #     return await (
-    #         LinkRepository
-    #         .get_all_user_urls(
-    #             session=db, 
-    #             user=request.state.user,
-    #             )
-    #         )
+        return await (
+            LinkRepository
+            .get_url_metric(
+                session=db, 
+                user=request.state.user,
+                url=url,
+                )
+            )
 
-    '''Нужно переделать под авторизованного пользователя'''
     async def deactivate_db_url_by_secret_key(
-            self, 
+            self,
+            request: Request,
             db: AsyncSession, 
             secret_key: str,
         ) -> models.URL|None:
         
-        db_url = await self.get_db_url_by_secret_key(db, secret_key)
+        db_url = await self.get_db_url_by_secret_key(request.state.user, db, secret_key)
         if db_url:
             db_url.is_active = False
             await db.commit()

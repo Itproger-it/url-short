@@ -14,7 +14,7 @@ class Model(DeclarativeBase):
     }
 
 async_engine = create_async_engine(
-    get_settings().async_db_url, connect_args={"check_same_thread": False}
+    get_settings().DATABASE_URL_asyncpg, connect_args={"check_same_thread": False}
 )
 
 async_session = async_sessionmaker(
@@ -26,14 +26,13 @@ async_session = async_sessionmaker(
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session() as session:
-        yield session
-        # try:
-        #     yield session
-        #     # await session.commit()
-        #     # await session.close()
-        # except SQLAlchemyError as error:
-        #     await session.rollback()
-        #     raise
+        try:
+            yield session
+            await session.commit()
+            await session.close()
+        except SQLAlchemyError as error:
+            await session.rollback()
+            raise
 
 
 async def create_tables():

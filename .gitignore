@@ -4,7 +4,24 @@ __pycache__
 /.venv
 venv
 .env
+.DS_Store
 snow_flake
 *.db
+LICENSE
+.idea
+.vscode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+poetry.lock
+pyproject.toml
 
+/nginx
+/prometheus
+docker-compose.yml
 /alchemy_learn
+/shortener_app/microservice1
+/shortener_app/database/cache_shrln.py
+/shortener_app/shrln_tg_bot
+/shortener_app/snow_flake

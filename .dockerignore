@@ -1,0 +1,22 @@
+# Python временные файлы
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Локальные файлы
+*.log
+.env
+*.sqlite3
+
+# Системные файлы
+.DS_Store
+.idea
+.vscode
+
+# Git-файлы
+.git
+.gitignore
+
+# Виртуальное окружение Python
+venv/

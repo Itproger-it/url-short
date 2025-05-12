@@ -1,8 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from shortener_app.database.models import URL, AuthUserUrl, APIUser
-from .dto import UserLinks
+from shortener_app.database.models import URL, AuthUserUrl, APIUser, UrlMetric
+from .dto import UserLinks, UrlMetric as UM
 
 
 class LinkRepository:
@@ -41,9 +41,27 @@ class LinkRepository:
             .execute(
                 select(URL)
                 .join(AuthUserUrl, URL.id == AuthUserUrl.url_id)
-                .where(AuthUserUrl.user_id == user.id)                
+                .where(AuthUserUrl.user_id == user.id, URL.is_active)                
             )
         )
 
         return [UserLinks.model_validate(data, from_attributes=True) for data in query.scalars().all()]
+    
+    
+    @classmethod
+    async def get_url_metric(
+        cls,
+        session: AsyncSession,
+        user: APIUser,
+        url: URL,
+        ) -> list[UM] | list:
+        query = await (
+            session
+            .execute(
+                select(UrlMetric)
+                .where(UrlMetric.url_id == url.id)                
+            )
+        )
+
+        return [UM.model_validate(data, from_attributes=True) for data in query.scalars().all()]
 

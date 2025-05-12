@@ -13,38 +13,35 @@ env.read_env()
 
 class Settings(BaseSettings):
     env_name: str = "Local"
-    base_url: str = "http://localhost:8000"
+    base_url: str = "sqlite+aiosqlite:///./shortener.db"
     db_url: str = "sqlite:///./shortener.db"
     async_db_url: str = "sqlite+aiosqlite:///./shortener.db"
 
-    # SECRET_KEY: str = "your_secret_key"
-    # ALGORITHM: str = "HS256"
-    # ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    # REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    REDIS_HOST: str = env('REDIS_HOST')
+    REDIS_PORT: int = env('REDIS_PORT')
+
 
     API_SECRET: str = env('API_SECRET')
     HASH_SALT: str = env('HASH_SALT')
 
+    ALGORITHM: str = "HS256"
     JWT_SECRET: str = env('JWT_SECRET')
     ACCESS_TOKEN_TTL: int = env.int('ACCESS_TOKEN_TTL')
     REFRESH_TOKEN_TTL: int = env.int('REFRESH_TOKEN_TTL')
     jwt_config: JWTConfig = JWTConfig(
     secret=JWT_SECRET,
+    algorithm=ALGORITHM,
     access_token_ttl=timedelta(seconds=ACCESS_TOKEN_TTL),
     refresh_token_ttl=timedelta(seconds=REFRESH_TOKEN_TTL),
     )
     snowflake_code: int = env.int("SNOWFLAKE_CODE")  
 
 
-    # DB_HOST: str
-    # DB_PORT: int
-    # DB_USER: str
-    # DB_PASS: str
-    # DB_NAME: str
-
-    # @property
-    # def db_url(self):
-    #     return "sqlite:///./shortener.db"
+    DB_HOST: str = env("DB_HOST")
+    DB_PORT: int = env("DB_PORT")
+    DB_USER: str = env("DB_USER")
+    DB_PASS: str = env("DB_PASS")
+    DB_NAME: str = env("DB_NAME")
 
     @property
     def DATABASE_URL_asyncpg(self):

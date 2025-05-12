@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Request, Security, Depends
+from fastapi import APIRouter, Request, Security, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from shortener_app.user.dto import UserProfileDTO
 
 from ..service import MeService
 from .response import UserProfileOut
@@ -17,11 +19,11 @@ def get_me_service() -> MeService:
     return MeService()
 
 
+@me_router.head("/")
+async def get_auth(request: Request, me_service: MeService = Depends(get_me_service)) -> None:
+    return
+
+
 @me_router.get("/me")
-async def get_me(request: Request, me_service: MeService = Depends(get_me_service)) -> None:
+async def get_me(request: Request, me_service: MeService = Depends(get_me_service)) -> UserProfileDTO:
     return me_service.get_me(user=request.state.user)
-
-
-# @me_router.get("create-user")
-# async def create(session: AsyncSession = Depends(get_db)):
-#     user = models.APIUser()
